@@ -6,12 +6,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: pip3 install flet flet-cli --break-system-packages
-      - run: flet build ipa --org com.res18dprch.player --yes
+      # Добавляем флаги для доступа к файлам и иконкам
+      - run: |
+          flet build ipa --org com.res18dprch.player --yes
       - name: Create IPA
         run: |
           mkdir -p Payload
-          # Ищем любой файл .app в папке build и копируем его в Payload
           find build -name "*.app" -exec cp -r {} Payload/ \;
+          # Магия: разрешаем папку в приложении "Файлы"
+          /usr/libexec/PlistBuddy -c "Add :UIFileSharingEnabled bool true" Payload/*.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :LSSupportsOpeningDocumentsInPlace bool true" Payload/*.app/Info.plist
           zip -vr manual_build.ipa Payload/
       - uses: actions/upload-artifact@v4
         with:
