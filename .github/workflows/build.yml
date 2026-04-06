@@ -6,18 +6,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: pip3 install flet flet-cli --break-system-packages
-      # Добавляем флаги для доступа к файлам и иконкам
-      - run: |
-          flet build ipa --org com.res18dprch.player --yes
-      - name: Create IPA
+      - run: flet build ipa --org com.res18dprch.player --yes
+      - name: Inject File Sharing Permissions
         run: |
           mkdir -p Payload
           find build -name "*.app" -exec cp -r {} Payload/ \;
-          # Магия: разрешаем папку в приложении "Файлы"
+          # ПРИНУДИТЕЛЬНОЕ ВКЛЮЧЕНИЕ ОБМЕНА ФАЙЛАМИ
           /usr/libexec/PlistBuddy -c "Add :UIFileSharingEnabled bool true" Payload/*.app/Info.plist
           /usr/libexec/PlistBuddy -c "Add :LSSupportsOpeningDocumentsInPlace bool true" Payload/*.app/Info.plist
-          zip -vr manual_build.ipa Payload/
+          # УБИРАЕМ КЭШИРОВАНИЕ
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.res18dprch.player.v5" Payload/*.app/Info.plist
+          zip -vr final_fixed.ipa Payload/
       - uses: actions/upload-artifact@v4
         with:
-          name: APP_FINISHED
-          path: manual_build.ipa
+          name: APP_STABLE
+          path: final_fixed.ipa
