@@ -1,4 +1,5 @@
 import flet as ft
+import os
 
 def main(page: ft.Page):
     page.bgcolor = "black"
@@ -6,31 +7,49 @@ def main(page: ft.Page):
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
-    # Создаем пикер ЗАРАНЕЕ, но максимально просто
-    def on_result(e: ft.FilePickerResultEvent):
-        if e.files:
-            btn.text = f"FILE: {e.files[0].name}"
+    header = ft.Text(" > AUDIO_NODE_v5", size=25, color="#00ff41", weight="bold")
+    status = ft.Text("SCANNING_LOCAL_STORAGE...", color="#555555")
+    
+    # Список для файлов
+    files_list = ft.ListView(expand=1, spacing=10, padding=20)
+
+    def scan_files(e=None):
+        files_list.controls.clear()
+        # Сканируем текущую папку приложения
+        path = os.getcwd() 
+        try:
+            found = False
+            for f in os.listdir(path):
+                if f.endswith((".mp3", ".wav", ".m4a")):
+                    files_list.controls.append(
+                        ft.Text(f" [ FILE ]: {f}", color="white", size=16)
+                    )
+                    found = True
+            if not found:
+                files_list.controls.append(ft.Text("NO_AUDIO_FOUND", color="#ff4141"))
+        except Exception as ex:
+            files_list.controls.append(ft.Text(f"ERROR: {str(ex)}", color="red"))
+        
+        status.value = f"STORAGE_OK | PATH: {path}"
         page.update()
 
-    picker = ft.FilePicker(on_result=on_result)
-    page.overlay.append(picker)
-
-    # Заголовок
-    header = ft.Text(" > DEVICE_NODE_v5", size=25, color="#00ff41", weight="bold")
-    
-    # Кнопка, которая просто дергает пикер
-    btn = ft.ElevatedButton(
-        " [ SELECT_FILE ] ",
-        on_click=lambda _: picker.pick_files(),
-        style=ft.ButtonStyle(
-            color="#00ff41", 
-            bgcolor="#111111",
-            shape=ft.RoundedRectangleBorder(radius=2)
-        )
+    btn_scan = ft.ElevatedButton(
+        " [ REFRESH_LIST ] ",
+        on_click=scan_files,
+        style=ft.ButtonStyle(color="#00ff41", bgcolor="#111111")
     )
 
-    page.add(header, ft.Divider(height=20, color="transparent"), btn)
+    page.add(
+        header,
+        status,
+        ft.Divider(color="#1a1a1a"),
+        ft.Container(content=files_list, height=200),
+        btn_scan
+    )
+    
     page.update()
+    # Авто-сканирование при запуске
+    scan_files()
 
 if __name__ == "__main__":
     ft.app(target=main)
