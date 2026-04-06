@@ -2,30 +2,37 @@ import flet as ft
 import time
 
 def main(page: ft.Page):
-    # Настройки страницы
     page.title = "AUDIO_NODE_v5"
     page.bgcolor = "#050505"
     page.theme_mode = ft.ThemeMode.DARK
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    page.window_full_screen = True
 
-    # Первая отрисовка пустого фона
+    # Пробиваем черный экран
     page.update()
-    time.sleep(1.5) # Даем системе "продышаться"
+    time.sleep(1.5)
 
-    # Элементы интерфейса
-    status_text = ft.Text("STATUS: SYSTEM_READY", color="#555555", size=12)
     header = ft.Text(" > DEVICE_NODE_v5.0", size=30, color="#00ff41", weight="bold")
-    
-    def on_click(e):
-        header.value = " > SCANNING_FILES..."
-        header.color = "white"
+    file_info = ft.Text("NO_FILE_SELECTED", color="#555555", size=12)
+
+    # Функция, которая сработает после выбора файла
+    def on_file_result(e: ft.FilePickerResultEvent):
+        if e.files:
+            header.value = f" > LOADED: {e.files[0].name}"
+            header.color = "white"
+            file_info.value = f"SIZE: {e.files[0].size} bytes | PATH: OK"
+        else:
+            header.value = " > SELECTION_CANCELLED"
+            header.color = "#ff4141"
         page.update()
 
+    # Создаем компонент выбора файлов
+    file_picker = ft.FilePicker(on_result=on_file_result)
+    page.overlay.append(file_picker)
+
     btn = ft.ElevatedButton(
-        " [ SELECT_AUDIO_FILES ] ",
-        on_click=on_click,
+        " [ OPEN_STORAGE ] ",
+        on_click=lambda _: file_picker.pick_files(allow_multiple=False),
         style=ft.ButtonStyle(
             color="#00ff41", 
             bgcolor="#111111",
@@ -33,12 +40,11 @@ def main(page: ft.Page):
         )
     )
 
-    # Добавляем всё на страницу
     page.add(
         ft.Column(
             [
                 header,
-                status_text,
+                file_info,
                 ft.Divider(color="#1a1a1a", height=40),
                 btn
             ],
@@ -46,7 +52,6 @@ def main(page: ft.Page):
         )
     )
     
-    # Финальное обновление
     page.update()
 
 if __name__ == "__main__":
