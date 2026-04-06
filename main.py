@@ -1,54 +1,72 @@
 import flet as ft
 import os
+import shutil
 
 def main(page: ft.Page):
-    # Устанавливаем черный фон принудительно, чтобы уйти от белого
     page.bgcolor = "black"
     page.theme_mode = ft.ThemeMode.DARK
-    page.vertical_alignment = ft.MainAxisAlignment.CENTER
-    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    
-    # Элементы интерфейса
-    header = ft.Text(" > NODE_FINAL_TEST", size=25, color="#00ff41", weight="bold")
-    status = ft.Text("READY_FOR_FILES", color="#555555")
-    
-    # Список файлов (пока пустой)
-    files_list = ft.ListView(expand=1, spacing=5)
+    page.vertical_alignment = "center"
+    page.horizontal_alignment = "center"
 
-    def refresh_list(e):
-        files_list.controls.clear()
-        try:
-            # Сканируем только текущую директорию (самый безопасный путь)
-            curr_dir = os.getcwd()
-            files = os.listdir(curr_dir)
-            for f in files:
-                if f.endswith((".mp3", ".wav", ".ipa", ".py")):
-                    files_list.controls.append(ft.Text(f" [F] {f}", color="white", size=14))
-            
-            status.value = f"PATH: {curr_dir}"
-            status.color = "blue"
-        except Exception as ex:
-            status.value = f"ERROR: {str(ex)}"
-            status.color = "red"
+    # Путь к папке, которую iOS обычно открывает для пользователя
+    # Попробуем стандартную папку Documents
+    doc_path = os.path.expanduser('~/Documents')
+    
+    header = ft.Text(" > AUDIO_NODE_v5", size=25, color="#00ff41", weight="bold")
+    status = ft.Text("READY", color="#555555")
+    files_list = ft.ListView(expand=1, spacing=10)
+
+    audio_player = ft.Audio(src="", autoplay=False)
+    page.overlay.append(audio_player)
+
+    def play_file(e):
+        file_name = e.control.data
+        # Полный путь к файлу для плеера
+        audio_player.src = os.path.join(doc_path, file_name)
+        audio_player.play()
+        status.value = f"PLAYING: {file_name}"
         page.update()
 
-    btn = ft.ElevatedButton(
-        " [ REFRESH_FILES ] ",
-        on_click=refresh_list,
-        style=ft.ButtonStyle(color="#00ff41", bgcolor="#111111")
-    )
+    def refresh(e=None):
+        files_list.controls.clear()
+        try:
+            # Если папки нет - создаем (это может заставить iOS показать её)
+            if not os.path.exists(doc_path):
+                os.makedirs(doc_path)
+            
+            items = os.listdir(doc_path)
+            found = False
+            for f in items:
+                if f.lower().endswith((".mp3", ".wav", ".m4a")):
+                    files_list.controls.append(
+                        ft.TextButton(
+                            text=f" [ PLAY ] {f}",
+                            data=f,
+                            on_click=play_file,
+                            style=ft.ButtonStyle(color="white")
+                        )
+                    )
+                    found = True
+            
+            if not found:
+                status.value = "EMPTY: COPY FILES TO APP FOLDER"
+            else:
+                status.value = f"FOUND {len(files_list.controls)} FILES"
+                
+        except Exception as ex:
+            status.value = f"ERR: {str(ex)}"
+        page.update()
 
-    # Добавляем все элементы
     page.add(
         header,
         status,
-        ft.Divider(height=20, color="#1a1a1a"),
-        ft.Container(content=files_list, height=150),
-        btn
+        ft.Divider(color="#1a1a1a"),
+        ft.Container(content=files_list, height=250),
+        ft.ElevatedButton(" [ REFRESH_LIST ] ", on_click=refresh)
     )
     
-    # Финальное обновление
     page.update()
+    refresh()
 
 if __name__ == "__main__":
     ft.app(target=main)
