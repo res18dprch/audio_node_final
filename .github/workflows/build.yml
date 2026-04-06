@@ -1,23 +1,32 @@
 name: Build IPA
 on: [push]
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # Убираем предупреждение
+
 jobs:
   build:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - run: pip3 install flet flet-cli --break-system-packages
-      - run: flet build ipa --org com.res18dprch.player --yes
-      - name: Inject File Sharing Permissions
+      
+      - name: Build Flet IPA
+        run: flet build ipa --org com.res18dprch.player --yes
+
+      - name: Inject Permissions & Fix Info.plist
         run: |
           mkdir -p Payload
           find build -name "*.app" -exec cp -r {} Payload/ \;
-          # ПРИНУДИТЕЛЬНОЕ ВКЛЮЧЕНИЕ ОБМЕНА ФАЙЛАМИ
+          # Включаем обмен файлами (чтобы видеть папку в iTunes/Файлах)
           /usr/libexec/PlistBuddy -c "Add :UIFileSharingEnabled bool true" Payload/*.app/Info.plist
           /usr/libexec/PlistBuddy -c "Add :LSSupportsOpeningDocumentsInPlace bool true" Payload/*.app/Info.plist
-          # УБИРАЕМ КЭШИРОВАНИЕ
-          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.res18dprch.player.v5" Payload/*.app/Info.plist
-          zip -vr final_fixed.ipa Payload/
+          # Регистрируем поддержку аудио, чтобы iOS не блокировала плеер
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" Payload/*.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string audio" Payload/*.app/Info.plist
+          
+          zip -vr audio_node_final.ipa Payload/
+
       - uses: actions/upload-artifact@v4
         with:
           name: APP_STABLE
-          path: final_fixed.ipa
+          path: audio_node_final.ipa
