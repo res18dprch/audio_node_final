@@ -6,13 +6,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: pip3 install flet flet-cli --break-system-packages
-      # Убрали флаг --release, который вызывал ошибку
       - run: flet build ipa --org com.res18dprch.player --yes
       - name: Create IPA
         run: |
           mkdir -p Payload
-          # Собираем приложение из папки билда
-          cp -r build/ipa/*.app Payload/
+          # Ищем любой файл .app в папке build и копируем его в Payload
+          find build -name "*.app" -exec cp -r {} Payload/ \;
           zip -vr manual_build.ipa Payload/
       - uses: actions/upload-artifact@v4
         with:
