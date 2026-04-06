@@ -1,30 +1,31 @@
 import flet as ft
-import asyncio
+import time
 
-async def main(page: ft.Page):
-    # Настройки страницы для предотвращения конфликтов графики
-    page.title = "NODE_v5"
+def main(page: ft.Page):
+    # Убираем все лишнее, оставляем только базу
+    page.bgcolor = "#000000"
     page.theme_mode = ft.ThemeMode.DARK
-    page.bgcolor = "black"
+    page.padding = 50
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    
-    # ПРИНУДИТЕЛЬНАЯ ПАУЗА: Даем iPhone 11 время проснуться
-    await asyncio.sleep(3.0)
 
-    # Самый простой текстовый элемент для проверки отрисовки
-    test_text = ft.Text(
-        value=" > SYSTEM_LOADED_OK",
-        size=30,
-        color="#00ff41",
-        weight=ft.FontWeight.BOLD,
+    # Принудительное обновление страницы до добавления текста
+    page.update()
+    
+    # Небольшая пауза старым добрым методом
+    time.sleep(2)
+
+    # Яркий текст, который точно должно быть видно
+    text_node = ft.Text(
+        " > READY_TO_WORK",
+        size=35,
+        color="#00FF41",
+        weight="bold",
         font_family="monospace"
     )
 
-    # Добавляем элемент и принудительно обновляем страницу
-    await page.add_async(test_text)
-    await page.update_async()
+    page.add(text_node)
+    page.update()
 
 if __name__ == "__main__":
-    # Запуск в режиме мобильного приложения
     ft.app(target=main)
