@@ -2,50 +2,49 @@ import flet as ft
 import os
 
 def main(page: ft.Page):
-    # Убираем все лишние настройки, оставляем только базу
     page.bgcolor = "black"
-    page.theme_mode = ft.ThemeMode.DARK
-    page.vertical_alignment = ft.MainAxisAlignment.CENTER
-    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-
-    # Путь к документам (самый простой вариант)
-    doc_path = os.path.expanduser('~/Documents')
-
-    header = ft.Text(" > NODE_DEBUG_v1", size=20, color="#00ff41")
-    status = ft.Text("CHECKING_DOCUMENTS...", color="#555555")
+    page.vertical_alignment = "center"
     
-    # Просто текстовое поле для вывода списка
-    files_view = ft.Column(scroll=ft.ScrollMode.AUTO, expand=True)
+    # Список стандартных путей iOS
+    paths = {
+        "Home": os.path.expanduser('~'),
+        "Documents": os.path.join(os.path.expanduser('~'), 'Documents'),
+        "Library": os.path.join(os.path.expanduser('~'), 'Library'),
+        "Cwd": os.getcwd()
+    }
 
-    def check_folder(e=None):
-        files_view.controls.clear()
-        try:
-            if not os.path.exists(doc_path):
-                os.makedirs(doc_path)
+    log = ft.Column(scroll=ft.ScrollMode.AUTO, expand=True)
+    header = ft.Text(" > SYSTEM_PATH_DETECTOR", size=18, color="#00ff41")
+
+    def run_check(e=None):
+        log.controls.clear()
+        for name, path in paths.items():
+            exists = os.path.exists(path)
+            # Пробуем создать тестовый файл, чтобы проверить права
+            writable = "READ_ONLY"
+            if exists:
+                try:
+                    test_file = os.path.join(path, "test.txt")
+                    with open(test_file, "w") as f:
+                        f.write("test")
+                    os.remove(test_file)
+                    writable = "WRITABLE (OK)"
+                except:
+                    writable = "LOCKED"
             
-            content = os.listdir(doc_path)
-            if not content:
-                status.value = "FOLDER_EMPTY"
-            else:
-                status.value = f"FOUND_{len(content)}_ITEMS"
-                for item in content:
-                    files_view.controls.append(ft.Text(f" - {item}", color="white"))
-        except Exception as ex:
-            status.value = f"ERROR: {str(ex)}"
+            log.controls.append(
+                ft.Text(f"[{name}]: {path}\nSTATUS: {writable}", 
+                        size=12, color="white" if exists else "red")
+            )
         page.update()
-
-    btn = ft.ElevatedButton(" [ REFRESH ] ", on_click=check_folder)
 
     page.add(
         header,
-        status,
-        ft.Container(content=files_view, height=200, border=ft.border.all(1, "#1a1a1a")),
-        btn
+        ft.Container(log, height=400, border=ft.border.all(1, "#333333"), padding=10),
+        ft.ElevatedButton(" [ SCAN_SYSTEM ] ", on_click=run_check)
     )
-    
     page.update()
-    # Запуск проверки через секунду после старта
-    check_folder()
+    run_check()
 
 if __name__ == "__main__":
     ft.app(target=main)
