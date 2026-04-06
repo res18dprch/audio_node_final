@@ -2,41 +2,53 @@ import flet as ft
 import os
 
 def main(page: ft.Page):
+    # Устанавливаем черный фон принудительно, чтобы уйти от белого
     page.bgcolor = "black"
-    page.vertical_alignment = "center"
-    page.horizontal_alignment = "center"
-
-    # Создаем путь к папке Документы
-    doc_path = os.path.expanduser('~/Documents')
-    music_dir = os.path.join(doc_path, "MUSIC_NODE")
+    page.theme_mode = ft.ThemeMode.DARK
+    page.vertical_alignment = ft.MainAxisAlignment.CENTER
+    page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     
-    # Пытаемся создать папку, если её нет
-    try:
-        if not os.path.exists(music_dir):
-            os.makedirs(music_dir)
-        status_msg = "FOLDER_READY"
-    except Exception as e:
-        status_msg = f"ERROR: {str(e)}"
-
-    header = ft.Text(" > AUDIO_NODE_v5", size=25, color="#00ff41", weight="bold")
-    path_text = ft.Text(f"PATH: {music_dir}", size=10, color="#555555", selectable=True)
+    # Элементы интерфейса
+    header = ft.Text(" > NODE_FINAL_TEST", size=25, color="#00ff41", weight="bold")
+    status = ft.Text("READY_FOR_FILES", color="#555555")
     
-    files_list = ft.ListView(expand=1, spacing=10)
+    # Список файлов (пока пустой)
+    files_list = ft.ListView(expand=1, spacing=5)
 
-    def scan(e=None):
+    def refresh_list(e):
         files_list.controls.clear()
-        for f in os.listdir(music_dir):
-            if f.endswith((".mp3", ".wav")):
-                files_list.controls.append(ft.Text(f" [OK] {f}", color="white"))
-        if not files_list.controls:
-            files_list.controls.append(ft.Text("EMPTY: COPY MP3 TO THIS FOLDER", color="red"))
+        try:
+            # Сканируем только текущую директорию (самый безопасный путь)
+            curr_dir = os.getcwd()
+            files = os.listdir(curr_dir)
+            for f in files:
+                if f.endswith((".mp3", ".wav", ".ipa", ".py")):
+                    files_list.controls.append(ft.Text(f" [F] {f}", color="white", size=14))
+            
+            status.value = f"PATH: {curr_dir}"
+            status.color = "blue"
+        except Exception as ex:
+            status.value = f"ERROR: {str(ex)}"
+            status.color = "red"
         page.update()
 
-    btn = ft.ElevatedButton(" [ REFRESH ] ", on_click=scan, style=ft.ButtonStyle(color="#00ff41"))
+    btn = ft.ElevatedButton(
+        " [ REFRESH_FILES ] ",
+        on_click=refresh_list,
+        style=ft.ButtonStyle(color="#00ff41", bgcolor="#111111")
+    )
 
-    page.add(header, status_msg, path_text, ft.Container(files_list, height=150), btn)
+    # Добавляем все элементы
+    page.add(
+        header,
+        status,
+        ft.Divider(height=20, color="#1a1a1a"),
+        ft.Container(content=files_list, height=150),
+        btn
+    )
+    
+    # Финальное обновление
     page.update()
-    scan()
 
 if __name__ == "__main__":
     ft.app(target=main)
