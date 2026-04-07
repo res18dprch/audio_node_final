@@ -2,63 +2,62 @@ import flet as ft
 import os
 
 def main(page: ft.Page):
-    # 1. БАЗОВАЯ КОНФИГУРАЦИЯ (без теней и градиентов)
+    # 1. ОТКЛЮЧАЕМ ВСЕ ЭФФЕКТЫ
     page.bgcolor = "black"
     page.theme_mode = ft.ThemeMode.DARK
-    page.padding = 20
+    # Убираем анимации переходов, которые могут вешать старые iPhone
+    page.window_prevent_close = True 
     
-    # Путь к документам (уже проверенный нами ранее)
     doc_path = os.path.join(os.path.expanduser('~'), 'Documents')
     
-    # 2. ПРЕДВАРИТЕЛЬНАЯ ЗАГРУЗКА (чтобы не было "тьмы")
-    audio1 = ft.Audio(src="", autoplay=False)
-    page.overlay.append(audio1)
-    
-    status = ft.Text("SYSTEM: READY", color="#00ff41", size=14)
-    files_list = ft.Column(scroll=ft.ScrollMode.HIDDEN)
+    # Резервный плеер (создаем ПУСТЫМ)
+    audio_ref = ft.Ref[ft.Audio]()
 
-    def play_click(e):
-        try:
-            audio1.src = os.path.join(doc_path, e.control.data)
-            audio1.play()
-            status.value = f"PLAYING: {e.control.data}"
-            page.update()
-        except Exception as ex:
-            status.value = f"ERROR: {str(ex)[:20]}"
-            page.update()
-
-    def refresh(e=None):
-        files_list.controls.clear()
-        if not os.path.exists(doc_path):
-            os.makedirs(doc_path)
+    def play_action(e):
+        if not audio_ref.current:
+            audio_ref.current = ft.Audio(src="", autoplay=False)
+            page.overlay.append(audio_ref.current)
         
-        items = [f for f in os.listdir(doc_path) if f.lower().endswith(('.mp3', '.wav', '.m4a'))]
-        
-        for f in items:
-            # Используем ListTile - это стандартный элемент iOS, он самый стабильный
-            files_list.controls.append(
-                ft.ListTile(
-                    title=ft.Text(f, color="white", size=16),
-                    on_click=play_click,
-                    data=f,
-                    bgcolor="#111111"
-                )
-            )
-        
-        status.value = f"FILES_FOUND: {len(items)}"
+        audio_ref.current.src = os.path.join(doc_path, e.control.data)
+        audio_ref.current.play()
         page.update()
 
-    # 3. УЛУЧШЕННЫЙ ИНТЕРФЕЙС
-    page.add(
-        ft.Text("NODE_PLAYER_PRO", size=24, color="#00ff41", weight="bold"),
-        status,
-        ft.Divider(color="#333333"),
-        ft.ElevatedButton("SCAN STORAGE", on_click=refresh, color="white", bgcolor="#222222"),
-        ft.Container(content=files_list, expand=True)
+    # Простая функция рендера списка
+    def build_list():
+        items = []
+        try:
+            if not os.path.exists(doc_path):
+                os.makedirs(doc_path)
+            
+            raw_files = os.listdir(doc_path)
+            # Отфильтровываем системный мусор и Inbox
+            music_files = [f for f in raw_files if f.lower().endswith(('.mp3', '.wav'))]
+            
+            for f in music_files:
+                items.append(
+                    ft.TextButton(
+                        text=f" > {f}",
+                        data=f,
+                        on_click=play_action,
+                        style=ft.ButtonStyle(color="white")
+                    )
+                )
+        except:
+            items.append(ft.Text("FS_ERROR", color="red"))
+        return items
+
+    # ГЛАВНЫЙ ЭКРАН (Минимализм)
+    main_container = ft.Column(
+        controls=[
+            ft.Text("STABLE_NODE_V11", color="#00ff41", size=18),
+            ft.Divider(color="#1a1a1a"),
+            ft.Column(controls=build_list(), scroll=ft.ScrollMode.AUTO)
+        ]
     )
-    
+
+    # Добавляем всё ОДНИМ махом в конце
+    page.add(main_container)
     page.update()
-    refresh()
 
 if __name__ == "__main__":
     ft.app(target=main)
