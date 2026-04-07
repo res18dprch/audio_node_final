@@ -8,7 +8,9 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - run: pip3 install flet flet-cli --break-system-packages
+      
+      - name: Install Flet
+        run: pip3 install flet flet-cli --break-system-packages
       
       - name: Build Flet IPA
         run: flet build ipa --org com.res18dprch.player --yes
@@ -16,16 +18,21 @@ jobs:
       - name: Patch and Zip
         run: |
           mkdir -p Payload
-          cp -r build/ipa/*.app Payload/
+          # Ищем .app в любой подпапке build и копируем в Payload
+          find build -name "*.app" -type d -exec cp -R {} Payload/ \;
           
-          # Прямые команды без поиска - так надежнее
-          APP_PATH="Payload/*.app"
-          /usr/libexec/PlistBuddy -c "Add :UIFileSharingEnabled bool true" $APP_PATH/Info.plist
-          /usr/libexec/PlistBuddy -c "Add :LSSupportsOpeningDocumentsInPlace bool true" $APP_PATH/Info.plist
-          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" $APP_PATH/Info.plist
-          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string audio" $APP_PATH/Info.plist
-          
-          zip -r audio_node_final.ipa Payload/
+          APP_PATH=$(ls -d Payload/*.app)
+          if [ -d "$APP_PATH" ]; then
+            /usr/libexec/PlistBuddy -c "Add :UIFileSharingEnabled bool true" "$APP_PATH/Info.plist"
+            /usr/libexec/PlistBuddy -c "Add :LSSupportsOpeningDocumentsInPlace bool true" "$APP_PATH/Info.plist"
+            /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" "$APP_PATH/Info.plist"
+            /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string audio" "$APP_PATH/Info.plist"
+            
+            zip -r audio_node_final.ipa Payload/
+          else
+            echo "Error: .app file not found in Payload"
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
