@@ -1,7 +1,7 @@
 name: Build IPA
 on: [push]
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # Убираем предупреждение
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -13,18 +13,19 @@ jobs:
       - name: Build Flet IPA
         run: flet build ipa --org com.res18dprch.player --yes
 
-      - name: Inject Permissions & Fix Info.plist
+      - name: Patch and Zip
         run: |
           mkdir -p Payload
-          find build -name "*.app" -exec cp -r {} Payload/ \;
-          # Включаем обмен файлами (чтобы видеть папку в iTunes/Файлах)
-          /usr/libexec/PlistBuddy -c "Add :UIFileSharingEnabled bool true" Payload/*.app/Info.plist
-          /usr/libexec/PlistBuddy -c "Add :LSSupportsOpeningDocumentsInPlace bool true" Payload/*.app/Info.plist
-          # Регистрируем поддержку аудио, чтобы iOS не блокировала плеер
-          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" Payload/*.app/Info.plist
-          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string audio" Payload/*.app/Info.plist
+          cp -r build/ipa/*.app Payload/
           
-          zip -vr audio_node_final.ipa Payload/
+          # Прямые команды без поиска - так надежнее
+          APP_PATH="Payload/*.app"
+          /usr/libexec/PlistBuddy -c "Add :UIFileSharingEnabled bool true" $APP_PATH/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :LSSupportsOpeningDocumentsInPlace bool true" $APP_PATH/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes array" $APP_PATH/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :UIBackgroundModes:0 string audio" $APP_PATH/Info.plist
+          
+          zip -r audio_node_final.ipa Payload/
 
       - uses: actions/upload-artifact@v4
         with:
