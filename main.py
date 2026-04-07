@@ -6,90 +6,78 @@ def main(page: ft.Page):
     page.bgcolor = "black"
     page.padding = 30
     
-    # Путь к документам
+    # Путь к песочнице
     doc_path = os.path.join(os.path.expanduser('~'), 'Documents')
     
-    # 1. СТРАХОВКА: Проверяем и создаем папку ДО отрисовки интерфейса
+    # Принудительная проверка папки СРАЗУ
     if not os.path.exists(doc_path):
-        try:
-            os.makedirs(doc_path)
-            # Небольшая пауза, чтобы iOS успела обновить файловую таблицу
-            time.sleep(0.5) 
-        except:
-            pass
+        os.makedirs(doc_path)
 
-    title = ft.Text(" > NODE_SYSTEM_v15", color="#00ff41", size=20, weight="bold")
-    status = ft.Text("STATUS: INITIALIZED", color="#555555")
-    files_column = ft.Column(scroll=ft.ScrollMode.AUTO, spacing=15)
+    # Элементы интерфейса
+    title = ft.Text(" > NODE_STABLE_v16", color="#00ff41", size=20, weight="bold")
+    status = ft.Text("SYSTEM_BOOT_COMPLETE", color="#555555")
     
-    # Плеер создаем, но не крепим к нему файл сразу
+    # Контейнер для списка, который НИКОГДА не бывает совсем пустым
+    files_view = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO)
+    
     audio_player = ft.Audio(src="", autoplay=False)
     page.overlay.append(audio_player)
 
     def play_track(e):
-        track_name = e.control.data
-        full_path = os.path.join(doc_path, track_name)
-        if os.path.exists(full_path):
-            audio_player.src = full_path
-            audio_player.play()
-            status.value = f"PLAYING: {track_name}"
-            status.color = "#00ff41"
-        else:
-            status.value = "ERROR: FILE_NOT_FOUND"
-            status.color = "red"
+        audio_player.src = os.path.join(doc_path, e.control.data)
+        audio_player.play()
+        status.value = f"PLAYING: {e.control.data}"
         page.update()
 
-    def refresh_library(e=None):
-        files_column.controls.clear()
+    def refresh(e=None):
+        files_view.controls.clear()
+        # Добавляем невидимый или мелкий элемент, чтобы Column не был пустым
+        files_view.controls.append(ft.Text("--- LIBRARY_START ---", color="#1a1a1a", size=10))
+        
         try:
-            # Сканируем папку, которая должна была появиться в "Файлах"
-            if os.path.exists(doc_path):
-                items = [f for f in os.listdir(doc_path) if f.lower().endswith(('.mp3', '.m4a', '.wav'))]
-                if not items:
-                    status.value = "STATUS: EMPTY_LIBRARY"
-                else:
-                    status.value = f"STATUS: {len(items)} TRACKS_LOADED"
-                    for f in items:
-                        files_column.controls.append(
-                            ft.GestureDetector(
-                                content=ft.Container(
-                                    content=ft.Text(f" [ PLAY ] > {f}", color="white", size=16),
-                                    padding=12,
-                                    border=ft.border.all(1, "#222222"),
-                                    border_radius=8
-                                ),
-                                data=f,
-                                on_tap=play_track
-                            )
-                        )
+            items = [f for f in os.listdir(doc_path) if f.lower().endswith(('.mp3', '.m4a', '.wav'))]
+            if not items:
+                status.value = "NO_FILES: ADD_VIA_FILES_APP"
             else:
-                status.value = "STATUS: PATH_MISSING"
+                status.value = f"FILES_FOUND: {len(items)}"
+                for f in items:
+                    files_view.controls.append(
+                        ft.GestureDetector(
+                            content=ft.Container(
+                                content=ft.Text(f" [ > ] {f}", color="white", size=16),
+                                padding=12, bgcolor="#111111", border_radius=5
+                            ),
+                            data=f, on_tap=play_track
+                        )
+                    )
         except:
-            status.value = "STATUS: SCAN_ERROR"
+            status.value = "SCAN_ERROR"
+        
+        files_view.controls.append(ft.Text("--- LIBRARY_END ---", color="#1a1a1a", size=10))
         page.update()
 
-    # Кнопка ручного обновления
-    refresh_btn = ft.GestureDetector(
+    # Постоянная кнопка сканирования
+    scan_btn = ft.GestureDetector(
         content=ft.Container(
-            content=ft.Text(" [ REFRESH_FILES ] ", color="#00ff41", weight="bold"),
-            padding=15,
-            border=ft.border.all(1, "#00ff41"),
-            border_radius=5
+            content=ft.Text(" [ RUN_SCAN_CMD ] ", color="#00ff41", size=18, weight="bold"),
+            padding=15, border=ft.border.all(1, "#00ff41"), border_radius=5
         ),
-        on_tap=refresh_library
+        on_tap=refresh
     )
 
+    # Собираем экран
     page.add(
         title,
         status,
-        ft.Divider(height=25, color="#1a1a1a"),
-        refresh_btn,
-        ft.Container(content=files_column, expand=True, margin=ft.margin.only(top=15))
+        ft.Divider(height=20, color="#1a1a1a"),
+        scan_btn,
+        ft.Container(content=files_view, expand=True, margin=ft.margin.only(top=20))
     )
     
     page.update()
-    # Авто-скан при запуске
-    refresh_library()
+    # Пауза перед первым сканом, чтобы iOS "проснулась"
+    time.sleep(0.3)
+    refresh()
 
 if __name__ == "__main__":
     ft.app(target=main)
